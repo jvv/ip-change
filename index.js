@@ -115,9 +115,9 @@ updateSubdomain = (hostedZoneId, newKnownIp) => {
 mqClient.on('connect', function () {
     Promise.all([getLastKnownIp(), getExternalIp()]).then(data => {
         if (data[0] === data[1]) {
-            // @todo = remove this message sending later.
-            msg = 'No IP change';
-            sendMessage(msg);
+            // @todo = something to set this right, no need to send message every successful time.
+            // msg = 'No IP change';
+            // sendMessage(msg);
         } else {
             // notify through message queue
             msg = 'IP Addresses changed';
