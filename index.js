@@ -62,11 +62,12 @@ saveKnownIp = (file) => {
 }
 
 const sendMessage = (msg) => {
-    const message = {
-        message: msg
-    };
-    mqClient.publish(process.env['MQTT_TOPIC'], JSON.stringify(message));
-    mqClient.end();
+    console.log(msg);
+        const message = {
+            message: msg
+        };
+        mqClient.publish(process.env['MQTT_TOPIC'], JSON.stringify(message));
+        mqClient.end();
 }
 
 getHostedZoneId = () => {
@@ -110,8 +111,8 @@ updateSubdomain = (hostedZoneId, newKnownIp) => {
     });
 }
 
+
 mqClient.on('connect', function () {
-    let msg;
     Promise.all([getLastKnownIp(), getExternalIp()]).then(data => {
         if (data[0] === data[1]) {
             // @todo = remove this message sending later.
@@ -122,23 +123,26 @@ mqClient.on('connect', function () {
             msg = 'IP Addresses changed';
             sendMessage(msg);
 
-            // save new known IP address
+            // // save new known IP address
             const newKnownIp = {
                 "ip": data[1]
             };
-            saveKnownIp(newKnownIp);
-
-            // AWS stuff:
-            getHostedZoneId().then((zoneId) => {
-                updateSubdomain(zoneId, data[1])
-                    .then(msg => {
-                        sendMessage(`AWS DNS A record for ${process.env['AWS_RECORD_NAME']} successfully updated`);
-                    }).catch(err => {
-                        sendMessage('ERR: Something went wrong updating AWS, you might want to look into this..');
-                    });
-            })
+            saveKnownIp(newKnownIp)
+                .then(() => {
+                    return getHostedZoneId()
+                })
+                .then((zoneId) => {
+                    return updateSubdomain(zoneId, data[1])
+                })
+                .then(msg => {
+                    sendMessage(`AWS DNS A record for ${process.env['AWS_RECORD_NAME']} successfully updated`);
+                })
+                .catch(err => {
+                    sendMessage('ERR: Something went wrong updating AWS, you might want to look into this..');
+                });
         }
     }).catch(err => {
         sendMessage(err);
     });
+
 });
