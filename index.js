@@ -28,7 +28,6 @@ getExternalIp = () => {
                 return reject('ERR: API IPify response not OK');
             } else {
                 resp.on('data', function (ip) {
-                    console.log('api', ip);
                     return resolve(ip.toString());
                 });
             }
@@ -62,12 +61,11 @@ saveKnownIp = (file) => {
 }
 
 const sendMessage = (msg) => {
-    console.log(msg);
-        const message = {
-            message: msg
-        };
-        mqClient.publish(process.env['MQTT_TOPIC'], JSON.stringify(message));
-        mqClient.end();
+    const message = {
+        message: msg
+    };
+    mqClient.publish(process.env['MQTT_TOPIC'], JSON.stringify(message));
+    mqClient.end();
 }
 
 getHostedZoneId = () => {
@@ -102,7 +100,6 @@ updateSubdomain = (hostedZoneId, newKnownIp) => {
             }
         }).promise()
             .then(res => {
-                console.log('A UPDATE', res);
                 return resolve('Success');
             })
             .catch(err => {
