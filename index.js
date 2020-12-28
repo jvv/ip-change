@@ -7,7 +7,7 @@ const mqtt = require('mqtt');
 const mqClient = mqtt.connect(process.env['MQTT_ADDRESS']);
 
 const AWS = require('aws-sdk');
-AWS.config.loadFromPath('./aws-config.json');
+AWS.config.loadFromPath('aws-config.json');
 const route53 = new AWS.Route53();
 
 const knownIpFile = 'data/ip.json';
