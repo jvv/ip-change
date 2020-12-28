@@ -7,18 +7,10 @@ const mqtt = require('mqtt');
 const mqClient = mqtt.connect(process.env['MQTT_ADDRESS']);
 
 const AWS = require('aws-sdk');
-const AWSaccessKeyId = process.env['AWS_ACCESS_KEY'];
-const AWSsecretAccessKey = process.env['AWS_SECRET_KEY'];
-const AWSregion = process.env['AWS_REGION'];
-AWS.config.update({
-    AWSaccessKeyId,
-    AWSsecretAccessKey,
-    region: AWSregion
-});
+AWS.config.loadFromPath('./config/aws-config.json');
 const route53 = new AWS.Route53();
 
 const knownIpFile = 'data/ip.json';
-
 
 getExternalIp = () => {
     return new Promise((resolve, reject) => {
@@ -109,37 +101,40 @@ updateSubdomain = (hostedZoneId, newKnownIp) => {
 }
 
 
-mqClient.on('connect', function () {
-    Promise.all([getLastKnownIp(), getExternalIp()]).then(data => {
-        if (data[0] === data[1]) {
-            // @todo = something to set this right, no need to send message every successful time.
-            // msg = 'No IP change';
-            // sendMessage(msg);
-        } else {
-            // notify through message queue
-            msg = 'IP Addresses changed';
-            sendMessage(msg);
 
-            // // save new known IP address
-            const newKnownIp = {
-                "ip": data[1]
-            };
-            saveKnownIp(newKnownIp)
-                .then(() => {
-                    return getHostedZoneId()
-                })
-                .then((zoneId) => {
-                    return updateSubdomain(zoneId, data[1])
-                })
-                .then(msg => {
-                    sendMessage(`AWS DNS A record for ${process.env['AWS_RECORD_NAME']} successfully updated`);
-                })
-                .catch(err => {
-                    sendMessage('ERR: Something went wrong updating AWS, you might want to look into this..');
-                });
-        }
-    }).catch(err => {
-        sendMessage(err);
-    });
+Promise.all([getLastKnownIp(), getExternalIp()]).then(data => {
+    if (data[0] !== data[1]) {
+        mqClient.on('connect', function () {
+        // notify through message queue
+        let msg = 'IP Addresses changed<br>';
 
+        // // save new known IP address
+        const newKnownIp = {
+            "ip": data[1]
+        };
+        saveKnownIp(newKnownIp)
+            .then(() => {
+                return getHostedZoneId()
+            })
+            .then((zoneId) => {
+                return updateSubdomain(zoneId, data[1])
+            })
+            .then(msg => {
+                msg += `AWS DNS A record for ${process.env['AWS_RECORD_NAME']} successfully updated`;
+                sendMessage(msg);
+            })
+            .catch(err => {
+                msg += 'ERR: Something went wrong updating AWS, you might want to look into this..';
+                sendMessage(msg);
+            });
+
+        });
+
+    } else {
+        // nothings wrong
+        console.log('All fine');
+        // why is node still running....
+    }
+}).catch(err => {
+    sendMessage(err);
 });
