@@ -104,9 +104,8 @@ updateSubdomain = (hostedZoneId, newKnownIp) => {
 
 Promise.all([getLastKnownIp(), getExternalIp()]).then(data => {
     if (data[0] !== data[1]) {
-        mqClient.on('connect', function () {
         // notify through message queue
-        let msg = 'IP Addresses changed<br>';
+        let messageToSend = 'IP Addresses changed\n';
 
         // // save new known IP address
         const newKnownIp = {
@@ -120,20 +119,18 @@ Promise.all([getLastKnownIp(), getExternalIp()]).then(data => {
                 return updateSubdomain(zoneId, data[1])
             })
             .then(msg => {
-                msg += `AWS DNS A record for ${process.env['AWS_RECORD_NAME']} successfully updated`;
-                sendMessage(msg);
+                messageToSend += `AWS DNS A record for ${process.env['AWS_RECORD_NAME']} successfully updated`;
+                sendMessage(messageToSend);
             })
             .catch(err => {
-                msg += 'ERR: Something went wrong updating AWS, you might want to look into this..';
-                sendMessage(msg);
+                messageToSend += 'ERR: Something went wrong updating AWS, you might want to look into this..';
+                sendMessage(messageToSend);
             });
-
-        });
 
     } else {
         // nothings wrong
         console.log('All fine');
-        // why is node still running....
+        process.exit(0)
     }
 }).catch(err => {
     sendMessage(err);
